@@ -22,3 +22,6 @@ Phase 3 (quality gates) is complete.
 
 ## Current Position
 Ready to start Milestone 1: Maya Scraper & DB Integration.
+
+## Milestone 1 Progress
+Milestone 1 / Sub-task 1 (DB Schema & Upsert) is complete.
