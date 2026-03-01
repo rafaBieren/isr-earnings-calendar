@@ -5,7 +5,7 @@ from typing import Any
 import requests
 
 MAYA_REPORTS_URL = (
-    "https://maya.tase.co.il/api/v1/corporate-actions/metadata/financial-scheduled"
+    "https://maya.tase.co.il/api/v1/corporate-actions/financial-reports-schedule"
 )
 MAYA_FINANCIAL_SCHEDULED_URL = (
     "https://maya.tase.co.il/he/corporate-actions/financial-scheduled"
@@ -16,7 +16,7 @@ REQUEST_TIMEOUT_SECONDS = 10
 def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
     _ = report_date
     try:
-        response = requests.get(
+        response = requests.post(
             MAYA_REPORTS_URL,
             headers={
                 "accept": "application/json",
@@ -26,6 +26,7 @@ def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
                     "Chrome/122.0.0.0 Safari/537.36"
                 ),
             },
+            json={"pageSize": 100, "pageNumber": 1},
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()

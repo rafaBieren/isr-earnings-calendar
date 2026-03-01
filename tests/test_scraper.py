@@ -13,27 +13,27 @@ from isr_earnings_calendar.scraper import (
 )
 
 
-@patch("isr_earnings_calendar.scraper.requests.get")
-def test_fetch_and_parse_success(mock_get: MagicMock) -> None:
+@patch("isr_earnings_calendar.scraper.requests.post")
+def test_fetch_and_parse_success(mock_post: MagicMock) -> None:
     mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = [
         {
             "id": 114,
             "scheduledDate": "2026-03-01T00:00:00",
-            "eventName": "פרסום דוחות",
+            "eventName": "Earnings Report",
             "companyId": 1266,
             "companyName": "Dummy",
             "scheduledTime": None,
             "reportId": None,
         }
     ]
-    mock_get.return_value = mock_response
+    mock_post.return_value = mock_response
 
     raw = fetch_maya_reports("2026-03-01")
     parsed = parse_maya_reports(raw)
 
-    mock_get.assert_called_once_with(
+    mock_post.assert_called_once_with(
         MAYA_REPORTS_URL,
         headers={
             "accept": "application/json",
@@ -43,13 +43,14 @@ def test_fetch_and_parse_success(mock_get: MagicMock) -> None:
                 "Chrome/122.0.0.0 Safari/537.36"
             ),
         },
+        json={"pageSize": 100, "pageNumber": 1},
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
     assert len(parsed) == 1
     assert parsed[0]["security_id"] == "1266"
     assert parsed[0]["company_name"] == "Dummy"
     assert parsed[0]["event_date"] == "2026-03-01T00:00:00"
-    assert parsed[0]["event_type"] == "פרסום דוחות"
+    assert parsed[0]["event_type"] == "Earnings Report"
     assert (
         parsed[0]["source_url"]
         == "https://maya.tase.co.il/he/corporate-actions/financial-scheduled"
@@ -63,11 +64,11 @@ def test_fetch_and_parse_success(mock_get: MagicMock) -> None:
         requests.exceptions.HTTPError("server error"),
     ],
 )
-@patch("isr_earnings_calendar.scraper.requests.get")
+@patch("isr_earnings_calendar.scraper.requests.post")
 def test_fetch_handles_request_errors_gracefully(
-    mock_get: MagicMock, error: requests.exceptions.RequestException
+    mock_post: MagicMock, error: requests.exceptions.RequestException
 ) -> None:
-    mock_get.side_effect = error
+    mock_post.side_effect = error
 
     raw = fetch_maya_reports("2026-03-01")
     parsed = parse_maya_reports(raw)
