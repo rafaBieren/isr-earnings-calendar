@@ -1,13 +1,28 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import date, datetime
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Response
 from icalendar import Calendar, Event as IcsEvent
 
 from .db import get_all_events
+from .sync import sync_maya_events
 
-app = FastAPI(title="ISR Earnings Calendar API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(sync_maya_events, "cron", hour=8, minute=0)
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.shutdown()
+
+
+app = FastAPI(title="ISR Earnings Calendar API", lifespan=lifespan)
 
 
 def _parse_event_date(value: str) -> date | datetime:

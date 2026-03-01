@@ -36,3 +36,6 @@ Milestone 2: ICS Feed API.
 
 ## Milestone 2 Progress
 Milestone 2 / Sub-task 1 (ICS API) is complete.
+
+## Milestone 3 Progress
+Milestone 3 / Sub-task 1 (Background Scheduler) is complete.

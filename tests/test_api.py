@@ -28,8 +28,13 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
         },
     ]
 
-    client = TestClient(app)
-    response = client.get("/calendar")
+    with (
+        patch("isr_earnings_calendar.api.BackgroundScheduler.add_job"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.start"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.shutdown"),
+    ):
+        with TestClient(app) as client:
+            response = client.get("/calendar")
 
     assert response.status_code == 200
     assert "text/calendar" in response.headers["content-type"]
