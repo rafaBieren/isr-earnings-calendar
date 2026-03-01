@@ -43,7 +43,7 @@ def test_fetch_and_parse_success(mock_post: MagicMock) -> None:
                 "Chrome/122.0.0.0 Safari/537.36"
             ),
         },
-        json={"pageSize": 100, "pageNumber": 1},
+        json={"pageSize": 20, "pageNumber": 1},
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
     assert len(parsed) == 1

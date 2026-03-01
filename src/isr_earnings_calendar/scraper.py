@@ -26,7 +26,7 @@ def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
                     "Chrome/122.0.0.0 Safari/537.36"
                 ),
             },
-            json={"pageSize": 100, "pageNumber": 1},
+            json={"pageSize": 20, "pageNumber": 1},
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
