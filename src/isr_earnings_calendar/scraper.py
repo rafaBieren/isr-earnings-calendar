@@ -4,60 +4,79 @@ from typing import Any
 
 import requests
 
-MAYA_REPORTS_URL = "https://maya.tase.co.il/api/reports"
+MAYA_REPORTS_URL = (
+    "https://maya.tase.co.il/api/v1/corporate-actions/metadata/financial-scheduled"
+)
+MAYA_FINANCIAL_SCHEDULED_URL = (
+    "https://maya.tase.co.il/he/corporate-actions/financial-scheduled"
+)
 REQUEST_TIMEOUT_SECONDS = 10
 
 
-def fetch_maya_reports(report_date: str) -> dict[str, Any]:
+def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
+    _ = report_date
     try:
         response = requests.get(
             MAYA_REPORTS_URL,
-            params={"date": report_date},
+            headers={
+                "accept": "application/json",
+                "user-agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/122.0.0.0 Safari/537.36"
+                ),
+            },
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         payload = response.json()
-        if isinstance(payload, dict):
+        if isinstance(payload, list):
             return payload
-        return {"reports": []}
+        return []
     except requests.exceptions.RequestException:
-        return {"reports": []}
+        return []
     except ValueError:
-        return {"reports": []}
+        return []
 
 
 def parse_maya_reports(raw_data: Any) -> list[dict[str, str | None]]:
-    reports: list[Any]
-    if isinstance(raw_data, dict):
-        reports = raw_data.get("reports", [])
-    elif isinstance(raw_data, list):
-        reports = raw_data
-    else:
-        reports = []
+    if not isinstance(raw_data, list):
+        return []
 
     parsed_events: list[dict[str, str | None]] = []
-    for report in reports:
+    for report in raw_data:
         if not isinstance(report, dict):
             continue
 
-        security_id = str(report.get("security_id") or report.get("securityId") or "")
-        company_name = str(
-            report.get("company_name") or report.get("companyName") or ""
-        )
-        event_date = str(report.get("event_date") or report.get("eventDate") or "")
-        event_type = str(report.get("event_type") or report.get("eventType") or "")
-        source_url = report.get("source_url") or report.get("sourceUrl")
+        company_id = report.get("companyId")
+        company_name = str(report.get("companyName") or "")
+        event_type = str(report.get("eventName") or "")
 
-        if not security_id or not company_name or not event_date or not event_type:
+        scheduled_date = report.get("scheduledDate")
+        if not scheduled_date:
+            continue
+        date_str = str(scheduled_date)
+        date_part = date_str.split("T")[0]
+
+        scheduled_time = report.get("scheduledTime")
+        if scheduled_time:
+            time_str = str(scheduled_time)
+            if len(time_str) == 5:
+                time_str = f"{time_str}:00"
+            event_date = f"{date_part}T{time_str}"
+        else:
+            event_date = date_str
+
+        if company_id is None or not company_name or not event_type:
             continue
 
         parsed_events.append(
             {
-                "security_id": security_id,
+                "security_id": str(company_id),
                 "company_name": company_name,
                 "event_date": event_date,
                 "event_type": event_type,
-                "source_url": source_url,
+                "source_url": MAYA_FINANCIAL_SCHEDULED_URL,
             }
         )
 

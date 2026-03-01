@@ -17,17 +17,17 @@ from isr_earnings_calendar.scraper import (
 def test_fetch_and_parse_success(mock_get: MagicMock) -> None:
     mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
-    mock_response.json.return_value = {
-        "reports": [
-            {
-                "security_id": "12345",
-                "company_name": "Example Co",
-                "event_date": "2026-03-01",
-                "event_type": "earnings",
-                "source_url": "https://maya.tase.co.il/company/12345",
-            }
-        ]
-    }
+    mock_response.json.return_value = [
+        {
+            "id": 114,
+            "scheduledDate": "2026-03-01T00:00:00",
+            "eventName": "פרסום דוחות",
+            "companyId": 1266,
+            "companyName": "Dummy",
+            "scheduledTime": None,
+            "reportId": None,
+        }
+    ]
     mock_get.return_value = mock_response
 
     raw = fetch_maya_reports("2026-03-01")
@@ -35,15 +35,25 @@ def test_fetch_and_parse_success(mock_get: MagicMock) -> None:
 
     mock_get.assert_called_once_with(
         MAYA_REPORTS_URL,
-        params={"date": "2026-03-01"},
+        headers={
+            "accept": "application/json",
+            "user-agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/122.0.0.0 Safari/537.36"
+            ),
+        },
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
     assert len(parsed) == 1
-    assert parsed[0]["security_id"] == "12345"
-    assert parsed[0]["company_name"] == "Example Co"
-    assert parsed[0]["event_date"] == "2026-03-01"
-    assert parsed[0]["event_type"] == "earnings"
-    assert parsed[0]["source_url"] == "https://maya.tase.co.il/company/12345"
+    assert parsed[0]["security_id"] == "1266"
+    assert parsed[0]["company_name"] == "Dummy"
+    assert parsed[0]["event_date"] == "2026-03-01T00:00:00"
+    assert parsed[0]["event_type"] == "פרסום דוחות"
+    assert (
+        parsed[0]["source_url"]
+        == "https://maya.tase.co.il/he/corporate-actions/financial-scheduled"
+    )
 
 
 @pytest.mark.parametrize(
@@ -62,5 +72,5 @@ def test_fetch_handles_request_errors_gracefully(
     raw = fetch_maya_reports("2026-03-01")
     parsed = parse_maya_reports(raw)
 
-    assert raw == {"reports": []}
+    assert raw == []
     assert parsed == []

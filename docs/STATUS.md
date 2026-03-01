@@ -39,3 +39,6 @@ Milestone 2 / Sub-task 1 (ICS API) is complete.
 
 ## Milestone 3 Progress
 Milestone 3 / Sub-task 1 (Background Scheduler) is complete.
+
+## Milestone 4 Progress
+Milestone 4 / Sub-task 1 (Real Scraper) is complete.
