@@ -26,3 +26,10 @@ Ready to start Milestone 1: Maya Scraper & DB Integration.
 ## Milestone 1 Progress
 Milestone 1 / Sub-task 1 (DB Schema & Upsert) is complete.
 Milestone 1 / Sub-task 2 (Scraper Module) is complete.
+Milestone 1 / Sub-task 3 (Integration) is complete.
+
+## Milestone 1
+Milestone 1 (Maya Scraper & DB Integration) is COMPLETE.
+
+## Next Up
+Milestone 2: ICS Feed API.
