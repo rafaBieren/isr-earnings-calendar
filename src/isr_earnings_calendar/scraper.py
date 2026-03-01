@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import requests
@@ -11,6 +12,19 @@ MAYA_FINANCIAL_SCHEDULED_URL = (
     "https://maya.tase.co.il/he/corporate-actions/financial-scheduled"
 )
 REQUEST_TIMEOUT_SECONDS = 10
+
+
+def _normalize_time(time_str: str) -> str:
+    stripped = time_str.strip()
+    try:
+        upper_value = stripped.upper()
+        if "AM" in upper_value or "PM" in upper_value:
+            return datetime.strptime(upper_value, "%I:%M %p").strftime("%H:%M:%S")
+        if len(stripped) == 5:
+            return f"{stripped}:00"
+        return stripped
+    except ValueError:
+        return time_str
 
 
 def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
@@ -61,9 +75,7 @@ def parse_maya_reports(raw_data: Any) -> list[dict[str, str | None]]:
 
         scheduled_time = report.get("scheduledTime")
         if scheduled_time:
-            time_str = str(scheduled_time)
-            if len(time_str) == 5:
-                time_str = f"{time_str}:00"
+            time_str = _normalize_time(str(scheduled_time))
             event_date = f"{date_part}T{time_str}"
         else:
             event_date = date_str

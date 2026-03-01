@@ -26,7 +26,16 @@ def test_fetch_and_parse_success(mock_post: MagicMock) -> None:
             "companyName": "Dummy",
             "scheduledTime": None,
             "reportId": None,
-        }
+        },
+        {
+            "id": 115,
+            "scheduledDate": "2026-03-02T00:00:00",
+            "eventName": "Conference Call",
+            "companyId": 1267,
+            "companyName": "Dummy Two",
+            "scheduledTime": "04:30 PM",
+            "reportId": 12345,
+        },
     ]
     mock_post.return_value = mock_response
 
@@ -46,7 +55,7 @@ def test_fetch_and_parse_success(mock_post: MagicMock) -> None:
         json={"pageSize": 20, "pageNumber": 1},
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
-    assert len(parsed) == 1
+    assert len(parsed) == 2
     assert parsed[0]["security_id"] == "1266"
     assert parsed[0]["company_name"] == "Dummy"
     assert parsed[0]["event_date"] == "2026-03-01T00:00:00"
@@ -55,6 +64,10 @@ def test_fetch_and_parse_success(mock_post: MagicMock) -> None:
         parsed[0]["source_url"]
         == "https://maya.tase.co.il/he/corporate-actions/financial-scheduled"
     )
+    assert parsed[1]["security_id"] == "1267"
+    assert parsed[1]["company_name"] == "Dummy Two"
+    assert parsed[1]["event_date"] == "2026-03-02T16:30:00"
+    assert parsed[1]["event_type"] == "Conference Call"
 
 
 @pytest.mark.parametrize(
