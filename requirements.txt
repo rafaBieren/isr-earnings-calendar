@@ -3,4 +3,3 @@ uvicorn
 requests
 icalendar
 apscheduler
--e .

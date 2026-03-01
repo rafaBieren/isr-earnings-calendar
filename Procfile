@@ -1,1 +1,1 @@
-web: python src/isr_earnings_calendar/main.py
+web: PYTHONPATH=src python src/isr_earnings_calendar/main.py
