@@ -12,19 +12,27 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
     mock_get_all_events.return_value = [
         {
             "id": 1,
-            "security_id": "111111",
-            "company_name": "Dummy Corp A",
-            "event_date": "2026-04-01",
-            "event_type": "Earnings",
+            "security_id": "100001",
+            "company_name": "Corp A",
+            "event_date": "2026-05-01",
+            "event_type": "פרסום דוחות",
             "source_url": "http://example.com/1",
         },
         {
             "id": 2,
-            "security_id": "222222",
-            "company_name": "Dummy Corp B",
-            "event_date": "2026-04-02",
-            "event_type": "Conference Call",
+            "security_id": "100002",
+            "company_name": "Corp B",
+            "event_date": "2026-05-01",
+            "event_type": "פרסום דוחות",
             "source_url": "http://example.com/2",
+        },
+        {
+            "id": 3,
+            "security_id": "100003",
+            "company_name": "Corp C",
+            "event_date": "2026-05-02T10:00:00",
+            "event_type": "שיחת ועידה",
+            "source_url": "http://example.com/3",
         },
     ]
 
@@ -40,4 +48,7 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
     assert response.status_code == 200
     assert "text/calendar" in response.headers["content-type"]
     assert "BEGIN:VCALENDAR" in response.text
-    assert "Dummy Corp A" in response.text
+    assert "SUMMARY:פרסומי דוחות (2 חברות)" in response.text
+    assert "Corp A" in response.text
+    assert "Corp B" in response.text
+    assert "DTEND:20260502T103000" in response.text

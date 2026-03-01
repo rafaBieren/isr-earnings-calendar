@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Response
@@ -38,21 +38,46 @@ def _parse_event_date(value: str) -> date | datetime:
 @app.get("/calendar")
 def get_calendar() -> Response:
     events = get_all_events()
+    earnings_by_date: dict[str, list[str]] = {}
+    other_events: list[dict[str, object]] = []
+
+    for event in events:
+        event_type = str(event.get("event_type", ""))
+        event_date = str(event.get("event_date", ""))
+        date_key = event_date.split("T")[0] if event_date else ""
+
+        if event_type == "פרסום דוחות" and date_key:
+            company_name = str(event.get("company_name", "Unknown Company"))
+            earnings_by_date.setdefault(date_key, []).append(company_name)
+            continue
+
+        other_events.append(event)
 
     calendar = Calendar()
     calendar.add("prodid", "-//ISR Earnings Calendar//")
     calendar.add("version", "2.0")
 
-    for event in events:
+    for date_str, companies in earnings_by_date.items():
+        calendar_event = IcsEvent()
+        calendar_event.add("summary", f"פרסומי דוחות ({len(companies)} חברות)")
+        calendar_event.add("dtstart", date.fromisoformat(date_str))
+        calendar_event.add("description", "\n".join(companies))
+        calendar_event.add("uid", f"earnings-{date_str}@isr-earnings")
+        calendar.add_component(calendar_event)
+
+    for event in other_events:
         company_name = str(event.get("company_name", "Unknown Company"))
         event_type = str(event.get("event_type", "event"))
         event_date = str(event.get("event_date", ""))
         security_id = str(event.get("security_id", "unknown"))
         source_url = event.get("source_url")
 
+        dtstart_val = _parse_event_date(event_date)
         calendar_event = IcsEvent()
         calendar_event.add("summary", f"{company_name} - {event_type}")
-        calendar_event.add("dtstart", _parse_event_date(event_date))
+        calendar_event.add("dtstart", dtstart_val)
+        if isinstance(dtstart_val, datetime):
+            calendar_event.add("dtend", dtstart_val + timedelta(minutes=30))
         calendar_event.add(
             "uid", f"{security_id}-{event_date}-{event_type}@isr-earnings"
         )
