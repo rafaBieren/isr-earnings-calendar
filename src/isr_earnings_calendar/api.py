@@ -59,7 +59,9 @@ def get_calendar() -> Response:
 
     for date_str, companies in earnings_by_date.items():
         calendar_event = IcsEvent()
-        calendar_event.add("summary", f"פרסומי דוחות ({len(companies)} חברות)")
+        calendar_event.add(
+            "summary", f"דוחות להיום ({len(companies)}): {', '.join(companies)}"
+        )
         calendar_event.add("dtstart", date.fromisoformat(date_str))
         calendar_event.add("description", "\n".join(companies))
         calendar_event.add("uid", f"earnings-{date_str}@isr-earnings")

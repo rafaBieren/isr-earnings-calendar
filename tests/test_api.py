@@ -48,7 +48,8 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
     assert response.status_code == 200
     assert "text/calendar" in response.headers["content-type"]
     assert "BEGIN:VCALENDAR" in response.text
-    assert "SUMMARY:פרסומי דוחות (2 חברות)" in response.text
-    assert "Corp A" in response.text
-    assert "Corp B" in response.text
-    assert "DTEND:20260502T103000" in response.text
+    unfolded_text = response.text.replace("\r\n ", "").replace("\\,", ",")
+    assert "SUMMARY:דוחות להיום (2): Corp A, Corp B" in unfolded_text
+    assert "Corp A" in unfolded_text
+    assert "Corp B" in unfolded_text
+    assert "DTEND:20260502T103000" in unfolded_text
