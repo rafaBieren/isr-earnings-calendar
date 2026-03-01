@@ -15,6 +15,7 @@ from .sync import sync_maya_events
 async def lifespan(app: FastAPI):
     scheduler = BackgroundScheduler()
     scheduler.add_job(sync_maya_events, "cron", hour=8, minute=0)
+    sync_maya_events()
     scheduler.start()
     try:
         yield

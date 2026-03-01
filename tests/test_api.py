@@ -30,6 +30,7 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
 
     with (
         patch("isr_earnings_calendar.api.BackgroundScheduler.add_job"),
+        patch("isr_earnings_calendar.api.sync_maya_events"),
         patch("isr_earnings_calendar.api.BackgroundScheduler.start"),
         patch("isr_earnings_calendar.api.BackgroundScheduler.shutdown"),
     ):

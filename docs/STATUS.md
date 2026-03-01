@@ -42,3 +42,7 @@ Milestone 3 / Sub-task 1 (Background Scheduler) is complete.
 
 ## Milestone 4 Progress
 Milestone 4 / Sub-task 1 (Real Scraper) is complete.
+Milestone 4 / Sub-task 2 (MVP Runner & Boot Sync) is complete.
+
+## MVP Status
+MVP (Milestones 1-4) is 100% COMPLETE.
