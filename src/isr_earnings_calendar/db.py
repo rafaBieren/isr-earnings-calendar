@@ -3,6 +3,8 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 
+from .config import load_settings
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,3 +65,18 @@ def upsert_event(connection: sqlite3.Connection, event: Event) -> None:
 def count_events(connection: sqlite3.Connection) -> int:
     row = connection.execute("SELECT COUNT(*) AS count FROM events").fetchone()
     return int(row["count"])
+
+
+def get_all_events() -> list[dict[str, object]]:
+    settings = load_settings()
+    connection = connect(settings.db_path)
+    try:
+        initialize_schema(connection)
+        rows = connection.execute("""
+            SELECT id, security_id, company_name, event_date, event_type, source_url
+            FROM events
+            ORDER BY event_date, security_id, event_type
+            """).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()

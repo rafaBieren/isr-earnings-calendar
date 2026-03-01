@@ -33,3 +33,6 @@ Milestone 1 (Maya Scraper & DB Integration) is COMPLETE.
 
 ## Next Up
 Milestone 2: ICS Feed API.
+
+## Milestone 2 Progress
+Milestone 2 / Sub-task 1 (ICS API) is complete.
