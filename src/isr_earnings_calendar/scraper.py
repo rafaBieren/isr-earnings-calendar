@@ -30,24 +30,36 @@ def _normalize_time(time_str: str) -> str:
 def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
     _ = report_date
     try:
-        response = requests.post(
-            MAYA_REPORTS_URL,
-            headers={
-                "accept": "application/json",
-                "user-agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/122.0.0.0 Safari/537.36"
-                ),
-            },
-            json={"pageSize": 20, "pageNumber": 1},
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        if isinstance(payload, list):
-            return payload
-        return []
+        all_raw_events: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            payload = {"pageSize": 20, "pageNumber": page}
+            response = requests.post(
+                MAYA_REPORTS_URL,
+                headers={
+                    "accept": "application/json",
+                    "user-agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/122.0.0.0 Safari/537.36"
+                    ),
+                },
+                json=payload,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if not isinstance(data, list) or not data:
+                break
+
+            all_raw_events.extend(data)
+            if len(data) < 20:
+                break
+
+            page += 1
+
+        return all_raw_events
     except requests.exceptions.RequestException:
         return []
     except ValueError:
