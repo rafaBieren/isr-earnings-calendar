@@ -78,6 +78,11 @@ def parse_maya_reports(raw_data: Any) -> list[dict[str, str | None]]:
         company_id = report.get("companyId")
         company_name = str(report.get("companyName") or "")
         event_type = str(report.get("eventName") or "")
+        report_id_raw = report.get("reportId")
+        try:
+            report_id_val = int(report_id_raw) if report_id_raw else None
+        except (ValueError, TypeError):
+            report_id_val = None
 
         scheduled_date = report.get("scheduledDate")
         if not scheduled_date:
@@ -102,6 +107,11 @@ def parse_maya_reports(raw_data: Any) -> list[dict[str, str | None]]:
                 "event_date": event_date,
                 "event_type": event_type,
                 "source_url": MAYA_FINANCIAL_SCHEDULED_URL,
+                "report_url": (
+                    f"https://maya.tase.co.il/reports/details/{report_id_val}"
+                    if report_id_val
+                    else ""
+                ),
             }
         )
 

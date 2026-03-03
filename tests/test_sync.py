@@ -21,6 +21,7 @@ def test_sync_inserts_and_is_idempotent(mock_fetch, tmp_path, monkeypatch) -> No
             "companyName": "Alpha Ltd",
             "scheduledTime": None,
             "reportId": None,
+            "report_url": "",
         },
         {
             "id": 22,
@@ -30,6 +31,7 @@ def test_sync_inserts_and_is_idempotent(mock_fetch, tmp_path, monkeypatch) -> No
             "companyName": "Beta Ltd",
             "scheduledTime": "10:30",
             "reportId": 1724094,
+            "report_url": "",
         },
     ]
     mock_fetch.return_value = dummy_raw_data

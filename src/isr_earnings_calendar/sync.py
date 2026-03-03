@@ -38,6 +38,7 @@ def sync_maya_events(date: str | None = None) -> int:
                         event_date=str(parsed_event["event_date"]),
                         event_type=str(parsed_event["event_type"]),
                         source_url=parsed_event.get("source_url"),
+                        report_url=parsed_event.get("report_url"),
                     ),
                 )
                 processed_events += 1

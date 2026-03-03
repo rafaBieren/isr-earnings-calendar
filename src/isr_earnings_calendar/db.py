@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS events (
     event_date TEXT NOT NULL,
     event_type TEXT NOT NULL,
     source_url TEXT,
+    report_url TEXT,
     UNIQUE (security_id, event_date, event_type)
 );
 """
@@ -25,6 +26,7 @@ class Event:
     event_date: str
     event_type: str
     source_url: str | None = None
+    report_url: str | None = None
 
 
 def connect(db_path: str) -> sqlite3.Connection:
@@ -35,6 +37,10 @@ def connect(db_path: str) -> sqlite3.Connection:
 
 def initialize_schema(connection: sqlite3.Connection) -> None:
     connection.execute(SCHEMA_SQL)
+    try:
+        connection.execute("ALTER TABLE events ADD COLUMN report_url TEXT")
+    except Exception:
+        pass
     connection.commit()
 
 
@@ -46,9 +52,10 @@ def upsert_event(connection: sqlite3.Connection, event: Event) -> None:
             company_name,
             event_date,
             event_type,
-            source_url
+            source_url,
+            report_url
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(security_id, event_date, event_type) DO NOTHING
         """,
         (
@@ -57,6 +64,7 @@ def upsert_event(connection: sqlite3.Connection, event: Event) -> None:
             event.event_date,
             event.event_type,
             event.source_url,
+            event.report_url,
         ),
     )
     connection.commit()
@@ -73,7 +81,14 @@ def get_all_events() -> list[dict[str, object]]:
     try:
         initialize_schema(connection)
         rows = connection.execute("""
-            SELECT id, security_id, company_name, event_date, event_type, source_url
+            SELECT
+                id,
+                security_id,
+                company_name,
+                event_date,
+                event_type,
+                source_url,
+                report_url
             FROM events
             ORDER BY event_date, security_id, event_type
             """).fetchall()

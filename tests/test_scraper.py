@@ -60,6 +60,7 @@ def test_fetch_and_parse_success(mock_post: MagicMock) -> None:
     assert parsed[0]["company_name"] == "Dummy"
     assert parsed[0]["event_date"] == "2026-03-01T00:00:00"
     assert parsed[0]["event_type"] == "Earnings Report"
+    assert parsed[0]["report_url"] == ""
     assert (
         parsed[0]["source_url"]
         == "https://maya.tase.co.il/he/corporate-actions/financial-scheduled"
@@ -68,6 +69,7 @@ def test_fetch_and_parse_success(mock_post: MagicMock) -> None:
     assert parsed[1]["company_name"] == "Dummy Two"
     assert parsed[1]["event_date"] == "2026-03-02T16:30:00"
     assert parsed[1]["event_type"] == "Conference Call"
+    assert parsed[1]["report_url"] == "https://maya.tase.co.il/reports/details/12345"
 
 
 @pytest.mark.parametrize(
