@@ -4,3 +4,4 @@ requests
 icalendar
 apscheduler
 pytz
+resend
