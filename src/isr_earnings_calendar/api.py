@@ -1,29 +1,32 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Response
 from icalendar import Calendar, Event as IcsEvent
+import pytz
 
 from .db import get_all_events
-from .sync import sync_maya_events
+from .sync import sync_offerings_job, sync_reports_job
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(sync_maya_events, "cron", hour=8, minute=0)
-    sync_maya_events()
+    scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Jerusalem"))
+    scheduler.add_job(sync_reports_job, "cron", hour=7, minute=0)
+    scheduler.add_job(sync_offerings_job, "cron", hour=20, minute=0)
     scheduler.start()
-    try:
-        yield
-    finally:
-        scheduler.shutdown()
+
+    sync_reports_job()
+    sync_offerings_job()
+
+    yield
+    scheduler.shutdown()
 
 
-app = FastAPI(title="ISR Earnings Calendar API", lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
 
 def _parse_event_date(value: str) -> date | datetime:
@@ -71,16 +74,16 @@ def get_calendar() -> Response:
         company_name = str(event.get("company_name", "Unknown Company"))
         event_type = str(event.get("event_type", "event"))
         event_date = str(event.get("event_date", ""))
+        end_date = str(event.get("end_date") or "")
         security_id = str(event.get("security_id", "unknown"))
         report_url = str(event.get("report_url") or "").strip()
         source_url = str(event.get("source_url") or "")
 
-        dtstart_val = _parse_event_date(event_date)
         calendar_event = IcsEvent()
         calendar_event.add("summary", f"{company_name} - {event_type}")
-        calendar_event.add("dtstart", dtstart_val)
-        if isinstance(dtstart_val, datetime):
-            calendar_event.add("dtend", dtstart_val + timedelta(minutes=30))
+        calendar_event.add("dtstart", _parse_event_date(event_date))
+        if end_date:
+            calendar_event.add("dtend", _parse_event_date(end_date))
         calendar_event.add(
             "uid", f"{security_id}-{event_date}-{event_type}@isr-earnings"
         )

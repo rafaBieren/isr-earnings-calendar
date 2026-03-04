@@ -4,10 +4,31 @@ import logging
 from datetime import date as datetime_date
 
 from .config import load_settings
-from .db import Event, connect, initialize_schema, upsert_event
-from .scraper import fetch_maya_reports, fetch_open_offerings, parse_maya_reports
+from .db import Event, connect, initialize_schema, save_events_to_db, upsert_event
+from .scraper import fetch_maya_reports, parse_maya_reports, fetch_open_offerings
 
 logger = logging.getLogger(__name__)
+
+
+def sync_reports_job() -> None:
+    print("Running reports sync job...")
+    try:
+        raw_reports = fetch_maya_reports()
+        parsed_reports = parse_maya_reports(raw_reports)
+        save_events_to_db(parsed_reports)
+        print(f"Successfully synced {len(parsed_reports)} reports.")
+    except Exception as e:
+        print(f"Error in reports sync job: {e}")
+
+
+def sync_offerings_job() -> None:
+    print("Running offerings sync job...")
+    try:
+        offerings = fetch_open_offerings()
+        save_events_to_db(offerings)
+        print(f"Successfully synced {len(offerings)} offerings.")
+    except Exception as e:
+        print(f"Error in offerings sync job: {e}")
 
 
 def sync_maya_events(date: str | None = None) -> int:
@@ -61,3 +82,8 @@ def sync_maya_events(date: str | None = None) -> int:
         connection.close()
 
     return processed_events
+
+
+if __name__ == "__main__":
+    sync_reports_job()
+    sync_offerings_job()

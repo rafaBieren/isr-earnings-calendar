@@ -29,7 +29,7 @@ def _normalize_time(time_str: str) -> str:
         return time_str
 
 
-def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
+def fetch_maya_reports(report_date: str | None = None) -> list[dict[str, Any]]:
     _ = report_date
     try:
         all_raw_events: list[dict[str, Any]] = []
@@ -68,65 +68,53 @@ def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
         return []
 
 
-def fetch_open_offerings() -> list[dict[str, str | None]]:
+def fetch_open_offerings() -> list:
+    scheme = "https://"
+    domain = "maya.tase.co.il"
+    api_url = scheme + domain + "/api/v1/offerings/open"
     headers = {
         "accept": "application/json, text/plain, */*",
         "user-agent": "Mozilla/5.0",
-        "referer": MAYA_OFFERINGS_URL,
+        "referer": scheme + domain + "/he/offerings",
         "x-maya-with": "Bursa",
     }
 
-    parsed_offerings: list[dict[str, str | None]] = []
+    parsed_offerings = []
     try:
-        response = requests.get(MAYA_OPEN_OFFERINGS_URL, headers=headers, timeout=15)
-        if response.status_code != 200:
-            return []
-        data = response.json()
-    except requests.exceptions.RequestException:
-        return []
-    except ValueError:
-        return []
+        resp = requests.get(api_url, headers=headers, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            for item in data:
+                company_name = item.get("companyName", "")
+                offer_type = item.get("offerType", "")
+                price = item.get("pricePerUnit", "")
+                qty = item.get("minOfferedUnits", "")
+                report_id = item.get("reportId", "")
 
-    if not isinstance(data, list):
-        return []
+                desc_lines = [
+                    f"סוג מכרז: {offer_type}",
+                    f"מחיר ליחידה: {price}",
+                    f"כמות יחידות מוצעות: {qty}",
+                ]
 
-    for item in data:
-        if not isinstance(item, dict):
-            continue
-
-        company_name = str(item.get("companyName") or "").strip()
-        offer_number = item.get("offerNumber")
-        begin_at = str(item.get("beginAt") or "").strip()
-        if not company_name or offer_number is None or not begin_at:
-            continue
-
-        offer_type = str(item.get("offerType") or "")
-        price = item.get("pricePerUnit")
-        qty = item.get("minOfferedUnits")
-        report_id = item.get("reportId")
-        report_url = (
-            f"https://maya.tase.co.il/reports/details/{report_id}" if report_id else ""
-        )
-        desc_lines = [
-            f"סוג מכרז: {offer_type}",
-            f"מחיר ליחידה: {price if price is not None else ''}",
-            f"כמות יחידות מוצעות: {qty if qty is not None else ''}",
-        ]
-        if report_url:
-            desc_lines.append(f'קישור לדו"ח ההצעה: {report_url}')
-
-        parsed_offerings.append(
-            {
-                "security_id": str(offer_number),
-                "company_name": f"הנפקה ציבורית - {company_name}",
-                "event_date": begin_at,
-                "end_date": str(item.get("endAt") or "") or None,
-                "event_type": "הנפקה ציבורית",
-                "description": "\n\n".join(desc_lines),
-                "source_url": MAYA_OFFERINGS_URL,
-                "report_url": report_url,
-            }
-        )
+                parsed_offerings.append(
+                    {
+                        "security_id": str(item.get("offerNumber", "")),
+                        "company_name": f"הנפקה ציבורית - {company_name}",
+                        "event_date": item.get("beginAt", ""),
+                        "end_date": item.get("endAt", ""),
+                        "event_type": "הנפקה ציבורית",
+                        "description": "\n\n".join(desc_lines),
+                        "report_url": (
+                            f"{scheme}{domain}/reports/details/{report_id}"
+                            if report_id
+                            else ""
+                        ),
+                        "source_url": f"{scheme}{domain}/he/offerings",
+                    }
+                )
+    except Exception as e:
+        print(f"Error fetching offerings: {e}")
 
     return parsed_offerings
 

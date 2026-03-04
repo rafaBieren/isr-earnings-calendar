@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS events (
     security_id TEXT NOT NULL,
     company_name TEXT NOT NULL,
     event_date TEXT NOT NULL,
+    end_date TEXT,
     event_type TEXT NOT NULL,
     description TEXT,
-    end_date TEXT,
     source_url TEXT,
     report_url TEXT,
     UNIQUE (security_id, event_date, event_type)
@@ -42,15 +42,15 @@ def connect(db_path: str) -> sqlite3.Connection:
 def initialize_schema(connection: sqlite3.Connection) -> None:
     connection.execute(SCHEMA_SQL)
     try:
+        connection.execute("ALTER TABLE events ADD COLUMN end_date TEXT")
+    except Exception:
+        pass
+    try:
         connection.execute("ALTER TABLE events ADD COLUMN report_url TEXT")
     except Exception:
         pass
     try:
         connection.execute("ALTER TABLE events ADD COLUMN description TEXT")
-    except Exception:
-        pass
-    try:
-        connection.execute("ALTER TABLE events ADD COLUMN end_date TEXT")
     except Exception:
         pass
     connection.commit()
@@ -84,6 +84,42 @@ def upsert_event(connection: sqlite3.Connection, event: Event) -> None:
         ),
     )
     connection.commit()
+
+
+def save_events_to_db(events: list[dict[str, object]]) -> None:
+    settings = load_settings()
+    connection = connect(settings.db_path)
+    try:
+        initialize_schema(connection)
+        for event in events:
+            connection.execute(
+                """
+                INSERT OR REPLACE INTO events (
+                    security_id,
+                    company_name,
+                    event_date,
+                    end_date,
+                    event_type,
+                    description,
+                    source_url,
+                    report_url
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event.get("security_id", ""),
+                    event.get("company_name", ""),
+                    event.get("event_date", ""),
+                    event.get("end_date", ""),
+                    event.get("event_type", ""),
+                    event.get("description", ""),
+                    event.get("source_url", ""),
+                    event.get("report_url", ""),
+                ),
+            )
+        connection.commit()
+    finally:
+        connection.close()
 
 
 def count_events(connection: sqlite3.Connection) -> int:
