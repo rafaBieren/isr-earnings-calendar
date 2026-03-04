@@ -6,9 +6,12 @@ import pytest
 import requests
 
 from isr_earnings_calendar.scraper import (
+    MAYA_OPEN_OFFERINGS_URL,
+    MAYA_OFFERINGS_URL,
     MAYA_REPORTS_URL,
     REQUEST_TIMEOUT_SECONDS,
     fetch_maya_reports,
+    fetch_open_offerings,
     parse_maya_reports,
 )
 
@@ -70,6 +73,54 @@ def test_fetch_and_parse_success(mock_post: MagicMock) -> None:
     assert parsed[1]["event_date"] == "2026-03-02T16:30:00"
     assert parsed[1]["event_type"] == "Conference Call"
     assert parsed[1]["report_url"] == "https://maya.tase.co.il/reports/details/12345"
+
+
+@patch("isr_earnings_calendar.scraper.requests.get")
+def test_fetch_open_offerings_success(mock_get: MagicMock) -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = [
+        {
+            "offerNumber": 6660039,
+            "reportId": 1725506,
+            "beginAt": "2026-03-04T08:30:00",
+            "endAt": "2026-03-04T15:30:00",
+            "companyName": "לוזון אשראי",
+            "offerType": "מחיר",
+            "minOfferedUnits": 2250000,
+            "pricePerUnit": 57,
+        }
+    ]
+    mock_get.return_value = mock_response
+
+    parsed = fetch_open_offerings()
+
+    mock_get.assert_called_once_with(
+        MAYA_OPEN_OFFERINGS_URL,
+        headers={
+            "accept": "application/json, text/plain, */*",
+            "user-agent": "Mozilla/5.0",
+            "referer": MAYA_OFFERINGS_URL,
+            "x-maya-with": "Bursa",
+        },
+        timeout=15,
+    )
+    assert parsed == [
+        {
+            "security_id": "6660039",
+            "company_name": "הנפקה ציבורית - לוזון אשראי",
+            "event_date": "2026-03-04T08:30:00",
+            "end_date": "2026-03-04T15:30:00",
+            "event_type": "הנפקה ציבורית",
+            "description": (
+                "סוג מכרז: מחיר\n\nמחיר ליחידה: 57\n\nכמות יחידות מוצעות: "
+                '2250000\n\nקישור לדו"ח ההצעה: '
+                "https://maya.tase.co.il/reports/details/1725506"
+            ),
+            "source_url": "https://maya.tase.co.il/he/offerings",
+            "report_url": "https://maya.tase.co.il/reports/details/1725506",
+        }
+    ]
 
 
 @pytest.mark.parametrize(

@@ -11,6 +11,8 @@ MAYA_REPORTS_URL = (
 MAYA_FINANCIAL_SCHEDULED_URL = (
     "https://maya.tase.co.il/he/corporate-actions/financial-scheduled"
 )
+MAYA_OPEN_OFFERINGS_URL = "https://maya.tase.co.il/api/v1/offerings/open"
+MAYA_OFFERINGS_URL = "https://maya.tase.co.il/he/offerings"
 REQUEST_TIMEOUT_SECONDS = 10
 
 
@@ -64,6 +66,69 @@ def fetch_maya_reports(report_date: str) -> list[dict[str, Any]]:
         return []
     except ValueError:
         return []
+
+
+def fetch_open_offerings() -> list[dict[str, str | None]]:
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "Mozilla/5.0",
+        "referer": MAYA_OFFERINGS_URL,
+        "x-maya-with": "Bursa",
+    }
+
+    parsed_offerings: list[dict[str, str | None]] = []
+    try:
+        response = requests.get(MAYA_OPEN_OFFERINGS_URL, headers=headers, timeout=15)
+        if response.status_code != 200:
+            return []
+        data = response.json()
+    except requests.exceptions.RequestException:
+        return []
+    except ValueError:
+        return []
+
+    if not isinstance(data, list):
+        return []
+
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+
+        company_name = str(item.get("companyName") or "").strip()
+        offer_number = item.get("offerNumber")
+        begin_at = str(item.get("beginAt") or "").strip()
+        if not company_name or offer_number is None or not begin_at:
+            continue
+
+        offer_type = str(item.get("offerType") or "")
+        price = item.get("pricePerUnit")
+        qty = item.get("minOfferedUnits")
+        report_id = item.get("reportId")
+        report_url = (
+            f"https://maya.tase.co.il/reports/details/{report_id}" if report_id else ""
+        )
+        desc_lines = [
+            f"סוג מכרז: {offer_type}",
+            f"מחיר ליחידה: {price if price is not None else ''}",
+            f"כמות יחידות מוצעות: {qty if qty is not None else ''}",
+        ]
+        if report_url:
+            desc_lines.append(f'קישור לדו"ח ההצעה: {report_url}')
+
+        parsed_offerings.append(
+            {
+                "security_id": str(offer_number),
+                "company_name": f"הנפקה ציבורית - {company_name}",
+                "event_date": begin_at,
+                "end_date": str(item.get("endAt") or "") or None,
+                "event_type": "הנפקה ציבורית",
+                "description": "\n\n".join(desc_lines),
+                "source_url": MAYA_OFFERINGS_URL,
+                "report_url": report_url,
+            }
+        )
+
+    return parsed_offerings
 
 
 def parse_maya_reports(raw_data: Any) -> list[dict[str, str | None]]:

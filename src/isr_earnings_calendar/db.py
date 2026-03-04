@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS events (
     company_name TEXT NOT NULL,
     event_date TEXT NOT NULL,
     event_type TEXT NOT NULL,
+    description TEXT,
+    end_date TEXT,
     source_url TEXT,
     report_url TEXT,
     UNIQUE (security_id, event_date, event_type)
@@ -25,6 +27,8 @@ class Event:
     company_name: str
     event_date: str
     event_type: str
+    description: str | None = None
+    end_date: str | None = None
     source_url: str | None = None
     report_url: str | None = None
 
@@ -41,6 +45,14 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
         connection.execute("ALTER TABLE events ADD COLUMN report_url TEXT")
     except Exception:
         pass
+    try:
+        connection.execute("ALTER TABLE events ADD COLUMN description TEXT")
+    except Exception:
+        pass
+    try:
+        connection.execute("ALTER TABLE events ADD COLUMN end_date TEXT")
+    except Exception:
+        pass
     connection.commit()
 
 
@@ -52,10 +64,12 @@ def upsert_event(connection: sqlite3.Connection, event: Event) -> None:
             company_name,
             event_date,
             event_type,
+            description,
+            end_date,
             source_url,
             report_url
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(security_id, event_date, event_type) DO NOTHING
         """,
         (
@@ -63,6 +77,8 @@ def upsert_event(connection: sqlite3.Connection, event: Event) -> None:
             event.company_name,
             event.event_date,
             event.event_type,
+            event.description,
+            event.end_date,
             event.source_url,
             event.report_url,
         ),
@@ -87,6 +103,8 @@ def get_all_events() -> list[dict[str, object]]:
                 company_name,
                 event_date,
                 event_type,
+                description,
+                end_date,
                 source_url,
                 report_url
             FROM events
