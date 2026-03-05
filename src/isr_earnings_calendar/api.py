@@ -79,14 +79,14 @@ def get_calendar() -> Response:
         report_url = str(event.get("report_url") or "").strip()
         source_url = str(event.get("source_url") or "")
 
-        dtstart_value = _parse_event_date(event_date)
+        dtstart_val = _parse_event_date(event_date)
         calendar_event = IcsEvent()
         calendar_event.add("summary", f"{company_name} - {event_type}")
-        calendar_event.add("dtstart", dtstart_value)
+        calendar_event.add("dtstart", dtstart_val)
         if end_date:
             calendar_event.add("dtend", _parse_event_date(end_date))
-        elif isinstance(dtstart_value, datetime):
-            calendar_event.add("dtend", dtstart_value + timedelta(minutes=30))
+        elif isinstance(dtstart_val, datetime):
+            calendar_event.add("dtend", dtstart_val + timedelta(minutes=30))
         calendar_event.add(
             "uid", f"{security_id}-{event_date}-{event_type}@isr-earnings"
         )
@@ -95,7 +95,8 @@ def get_calendar() -> Response:
             desc_lines.append(f"קישור לדיווח במאיה: {report_url}")
         if source_url:
             desc_lines.append(f"מקור: {source_url}")
-        calendar_event.add("description", "\n\n".join(desc_lines))
+        description = "\n\n".join(desc_lines)
+        calendar_event.add("description", description)
 
         calendar.add_component(calendar_event)
 
