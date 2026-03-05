@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Response
@@ -79,11 +79,14 @@ def get_calendar() -> Response:
         report_url = str(event.get("report_url") or "").strip()
         source_url = str(event.get("source_url") or "")
 
+        dtstart_value = _parse_event_date(event_date)
         calendar_event = IcsEvent()
         calendar_event.add("summary", f"{company_name} - {event_type}")
-        calendar_event.add("dtstart", _parse_event_date(event_date))
+        calendar_event.add("dtstart", dtstart_value)
         if end_date:
             calendar_event.add("dtend", _parse_event_date(end_date))
+        elif isinstance(dtstart_value, datetime):
+            calendar_event.add("dtend", dtstart_value + timedelta(minutes=30))
         calendar_event.add(
             "uid", f"{security_id}-{event_date}-{event_type}@isr-earnings"
         )

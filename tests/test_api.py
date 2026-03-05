@@ -35,15 +35,27 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
             "security_id": "100003",
             "company_name": "Corp C",
             "event_date": "2026-05-02T10:00:00",
+            "end_date": "",
             "event_type": call_type,
             "source_url": "http://example.com/3",
             "report_url": "https://maya.tase.co.il/reports/details/12345",
+        },
+        {
+            "id": 4,
+            "security_id": "100004",
+            "company_name": "Corp D",
+            "event_date": "2026-05-02T11:00:00",
+            "end_date": "2026-05-02T12:00:00",
+            "event_type": call_type,
+            "source_url": "http://example.com/4",
+            "report_url": "",
         },
     ]
 
     with (
         patch("isr_earnings_calendar.api.BackgroundScheduler.add_job"),
-        patch("isr_earnings_calendar.api.sync_maya_events"),
+        patch("isr_earnings_calendar.api.sync_reports_job"),
+        patch("isr_earnings_calendar.api.sync_offerings_job"),
         patch("isr_earnings_calendar.api.BackgroundScheduler.start"),
         patch("isr_earnings_calendar.api.BackgroundScheduler.shutdown"),
     ):
@@ -62,4 +74,5 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
     assert "Corp A" in unfolded_text
     assert "Corp B" in unfolded_text
     assert "DTEND:20260502T103000" in unfolded_text
+    assert "DTEND:20260502T120000" in unfolded_text
     assert "https://maya.tase.co.il/reports/details/12345" in unfolded_text
