@@ -5,3 +5,4 @@ icalendar
 apscheduler
 pytz
 resend
+beautifulsoup4

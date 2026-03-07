@@ -149,3 +149,86 @@ def get_all_events() -> list[dict[str, object]]:
         return [dict(row) for row in rows]
     finally:
         connection.close()
+
+
+def smart_merge_event(event_data: dict[str, object]) -> None:
+    """Professionally merges a new event or creates one if it doesn't exist."""
+    settings = load_settings()
+    connection = connect(settings.db_path)
+    try:
+        initialize_schema(connection)
+
+        event_date_str = str(event_data.get("event_date", ""))
+        date_prefix = event_date_str[:10] if event_date_str else ""
+        company = str(event_data.get("company_name", "")).strip()
+
+        if not date_prefix or not company:
+            return
+
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            SELECT id, description, end_date
+            FROM events
+            WHERE event_date LIKE ?
+              AND (company_name LIKE ? OR ? LIKE '%' || company_name || '%')
+            """,
+            (f"{date_prefix}%", f"%{company}%", company),
+        )
+        row = cursor.fetchone()
+
+        if row:
+            event_id = int(row["id"])
+            old_desc = row["description"]
+            old_end = row["end_date"]
+            new_desc = old_desc or ""
+            added_info = str(event_data.get("description", ""))
+
+            if added_info and added_info not in new_desc:
+                marker = (
+                    "\n\n-- \u05de\u05d9\u05d3\u05e2 \u05e0\u05d5\u05e1\u05e3 "
+                    "\u05de\u05e7\u05e9\u05e8\u05d9 \u05de\u05e9\u05e7\u05d9\u05e2"
+                    "\u05d9\u05dd --\n"
+                )
+                merged_desc = (
+                    f"{new_desc}{marker}{added_info}" if new_desc else added_info
+                )
+                new_end = event_data.get("end_date") or old_end
+                cursor.execute(
+                    "UPDATE events SET description = ?, end_date = ? WHERE id = ?",
+                    (merged_desc, new_end, event_id),
+                )
+        else:
+            security_id = event_data.get("security_id") or f"IR_{company}_{date_prefix}"
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO events (
+                    security_id,
+                    company_name,
+                    event_date,
+                    end_date,
+                    event_type,
+                    description,
+                    source_url,
+                    report_url
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(security_id),
+                    company,
+                    event_date_str,
+                    event_data.get("end_date"),
+                    event_data.get(
+                        "event_type",
+                        "\u05d0\u05d9\u05e8\u05d5\u05e2 \u05de\u05e9\u05e7\u05d9"
+                        "\u05e2\u05d9\u05dd",
+                    ),
+                    event_data.get("description", ""),
+                    event_data.get("source_url", ""),
+                    "",
+                ),
+            )
+        connection.commit()
+    finally:
+        connection.close()
