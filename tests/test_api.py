@@ -1,10 +1,13 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-from unittest.mock import patch
+import sys
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 
-from isr_earnings_calendar.api import app
+sys.modules.setdefault("resend", Mock())
+
+from isr_earnings_calendar.api import app  # noqa: E402
 
 
 @patch("isr_earnings_calendar.api.get_all_events")
@@ -76,3 +79,22 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
     assert "DTEND:20260502T103000" in unfolded_text
     assert "DTEND:20260502T120000" in unfolded_text
     assert "https://maya.tase.co.il/reports/details/12345" in unfolded_text
+
+
+@patch("isr_earnings_calendar.api.process_telegram_update")
+def test_telegram_webhook_accepts_update(mock_process_telegram_update) -> None:
+    update_payload = {"message": {"chat": {"id": 123}, "text": "hello"}}
+
+    with (
+        patch("isr_earnings_calendar.api.BackgroundScheduler.add_job"),
+        patch("isr_earnings_calendar.api.sync_reports_job"),
+        patch("isr_earnings_calendar.api.sync_offerings_job"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.start"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.shutdown"),
+    ):
+        with TestClient(app) as client:
+            response = client.post("/telegram/webhook", json=update_payload)
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    mock_process_telegram_update.assert_called_once_with(update_payload)
