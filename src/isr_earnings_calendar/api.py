@@ -281,6 +281,9 @@ def get_calendar() -> Response:
             "uid", f"{security_id}-{event_date}-{event_type}@isr-earnings"
         )
         description_lines = []
+        db_description = str(event.get("description") or "").strip()
+        if db_description:
+            description_lines.append(db_description)
         if report_url:
             description_lines.append(f"{REPORT_URL_LABEL}: {report_url}")
         if source_url:
