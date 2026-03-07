@@ -6,3 +6,5 @@ apscheduler
 pytz
 resend
 beautifulsoup4
+google-genai
+pydantic
