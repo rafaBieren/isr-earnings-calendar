@@ -81,6 +81,102 @@ def test_get_calendar_returns_ics(mock_get_all_events) -> None:
     assert "https://maya.tase.co.il/reports/details/12345" in unfolded_text
 
 
+def test_view_returns_html() -> None:
+    with (
+        patch("isr_earnings_calendar.api.BackgroundScheduler.add_job"),
+        patch("isr_earnings_calendar.api.sync_reports_job"),
+        patch("isr_earnings_calendar.api.sync_offerings_job"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.start"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.shutdown"),
+    ):
+        with TestClient(app) as client:
+            response = client.get("/view")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert 'id="calendar"' in response.text
+    assert "webcal://" in response.text
+    assert "calendar.google.com" in response.text
+
+
+@patch("isr_earnings_calendar.api.get_all_events")
+def test_events_json_shape(mock_get_all_events) -> None:
+    call_type = "שיחת ועידה"
+    mock_get_all_events.return_value = [
+        {
+            "id": 1,
+            "security_id": "100001",
+            "company_name": "Corp A",
+            "event_date": "2026-05-02T10:00:00",
+            "end_date": "",
+            "event_type": call_type,
+            "source_url": "http://example.com/1",
+            "report_url": "",
+            "description": "",
+        },
+    ]
+
+    with (
+        patch("isr_earnings_calendar.api.BackgroundScheduler.add_job"),
+        patch("isr_earnings_calendar.api.sync_reports_job"),
+        patch("isr_earnings_calendar.api.sync_offerings_job"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.start"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.shutdown"),
+    ):
+        with TestClient(app) as client:
+            response = client.get("/api/events")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload, list) and len(payload) == 1
+    event = payload[0]
+    assert event["title"] == f"Corp A - {call_type}"
+    assert event["start"] == "2026-05-02T10:00:00"
+    assert event["end"] == "2026-05-02T10:30:00"
+    assert event["allDay"] is False
+    assert event["extendedProps"]["event_type"] == call_type
+    assert event["extendedProps"]["company_name"] == "Corp A"
+    assert event["extendedProps"]["source_url"] == "http://example.com/1"
+
+
+@patch("isr_earnings_calendar.api.get_all_events")
+def test_events_json_matches_ics_grouping(mock_get_all_events) -> None:
+    earnings_type = "פרסום דוחות"
+    mock_get_all_events.return_value = [
+        {
+            "id": i,
+            "security_id": f"10000{i}",
+            "company_name": name,
+            "event_date": "2026-05-01",
+            "event_type": earnings_type,
+            "source_url": "",
+            "report_url": "",
+            "description": "",
+        }
+        for i, name in enumerate(["Corp A", "Corp B", "Corp C"], start=1)
+    ]
+
+    with (
+        patch("isr_earnings_calendar.api.BackgroundScheduler.add_job"),
+        patch("isr_earnings_calendar.api.sync_reports_job"),
+        patch("isr_earnings_calendar.api.sync_offerings_job"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.start"),
+        patch("isr_earnings_calendar.api.BackgroundScheduler.shutdown"),
+    ):
+        with TestClient(app) as client:
+            response = client.get("/api/events")
+
+    payload = response.json()
+    assert len(payload) == 1
+    grouped = payload[0]
+    assert grouped["allDay"] is True
+    assert grouped["start"] == "2026-05-01"
+    assert "Corp A" in grouped["title"]
+    assert "Corp B" in grouped["title"]
+    assert "Corp C" in grouped["title"]
+    assert "(3)" in grouped["title"]
+
+
 @patch("isr_earnings_calendar.api.process_telegram_update")
 def test_telegram_webhook_accepts_update(mock_process_telegram_update) -> None:
     update_payload = {"message": {"chat": {"id": 123}, "text": "hello"}}

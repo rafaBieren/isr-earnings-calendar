@@ -1,18 +1,28 @@
 from __future__ import annotations
 
 import os
+import urllib.parse
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import pytz
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import BackgroundTasks, FastAPI, Request, Response
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from icalendar import Calendar, Event as IcsEvent
 
 from .agent import process_ir_message
 from .db import get_all_events, smart_merge_event
 from .sync import sync_offerings_job, sync_reports_job
+
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_TEMPLATES_DIR = _PACKAGE_DIR / "templates"
+_STATIC_DIR = _PACKAGE_DIR / "static"
 
 EARNINGS_EVENT_TYPE = "\u05e4\u05e8\u05e1\u05d5\u05dd \u05d3\u05d5\u05d7\u05d5\u05ea"
 EARNINGS_SUMMARY = "\u05d3\u05d5\u05d7\u05d5\u05ea \u05dc\u05d4\u05d9\u05d5\u05dd"
@@ -205,6 +215,9 @@ def process_telegram_update(update_data: dict[str, object]) -> None:
 
 app = FastAPI(lifespan=lifespan)
 
+app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+
 
 @app.post("/telegram/webhook")
 async def telegram_webhook(
@@ -228,13 +241,32 @@ def _parse_event_date(value: str) -> date | datetime:
         return date.today()
 
 
-@app.get("/calendar")
-def get_calendar() -> Response:
-    events = get_all_events()
-    earnings_by_date: dict[str, list[str]] = {}
-    other_events: list[dict[str, object]] = []
+@dataclass(frozen=True, slots=True)
+class CalendarEvent:
+    uid: str
+    summary: str
+    start: date | datetime
+    end: date | datetime | None
+    all_day: bool
+    description: str
+    event_type: str
+    company_name: str
+    source_url: str
+    report_url: str
 
-    for event in events:
+
+def _build_calendar_events(
+    rows: list[dict[str, object]],
+) -> list[CalendarEvent]:
+    """Canonical event list shared by /calendar (ICS) and /api/events (JSON).
+
+    Same-day earnings reports are grouped into one all-day event so the web
+    view stays in sync with what subscribers see in Outlook/Google.
+    """
+    earnings_by_date: dict[str, list[str]] = {}
+    other_rows: list[dict[str, object]] = []
+
+    for event in rows:
         event_type = str(event.get("event_type", ""))
         event_date = str(event.get("event_date", ""))
         date_key = event_date.split("T")[0] if event_date else ""
@@ -244,43 +276,49 @@ def get_calendar() -> Response:
             earnings_by_date.setdefault(date_key, []).append(company_name)
             continue
 
-        other_events.append(event)
+        other_rows.append(event)
 
-    calendar = Calendar()
-    calendar.add("prodid", "-//ISR Earnings Calendar//")
-    calendar.add("version", "2.0")
+    result: list[CalendarEvent] = []
 
     for date_str, companies in earnings_by_date.items():
-        calendar_event = IcsEvent()
-        calendar_event.add(
-            "summary", f"{EARNINGS_SUMMARY} ({len(companies)}): {', '.join(companies)}"
+        result.append(
+            CalendarEvent(
+                uid=f"earnings-{date_str}@isr-earnings",
+                summary=(
+                    f"{EARNINGS_SUMMARY} ({len(companies)}): " f"{', '.join(companies)}"
+                ),
+                start=date.fromisoformat(date_str),
+                end=None,
+                all_day=True,
+                description="\n".join(companies),
+                event_type=EARNINGS_EVENT_TYPE,
+                company_name=", ".join(companies),
+                source_url="",
+                report_url="",
+            )
         )
-        calendar_event.add("dtstart", date.fromisoformat(date_str))
-        calendar_event.add("description", "\n".join(companies))
-        calendar_event.add("uid", f"earnings-{date_str}@isr-earnings")
-        calendar.add_component(calendar_event)
 
-    for event in other_events:
+    for event in other_rows:
         company_name = str(event.get("company_name", "Unknown Company"))
         event_type = str(event.get("event_type", "event"))
         event_date = str(event.get("event_date", ""))
-        end_date = str(event.get("end_date") or "")
+        end_date_str = str(event.get("end_date") or "")
         security_id = str(event.get("security_id", "unknown"))
         report_url = str(event.get("report_url") or "").strip()
         source_url = str(event.get("source_url") or "")
 
         dtstart_val = _parse_event_date(event_date)
-        calendar_event = IcsEvent()
-        calendar_event.add("summary", f"{company_name} - {event_type}")
-        calendar_event.add("dtstart", dtstart_val)
-        if end_date:
-            calendar_event.add("dtend", _parse_event_date(end_date))
+        all_day = not isinstance(dtstart_val, datetime)
+
+        end_val: date | datetime | None
+        if end_date_str:
+            end_val = _parse_event_date(end_date_str)
         elif isinstance(dtstart_val, datetime):
-            calendar_event.add("dtend", dtstart_val + timedelta(minutes=30))
-        calendar_event.add(
-            "uid", f"{security_id}-{event_date}-{event_type}@isr-earnings"
-        )
-        description_lines = []
+            end_val = dtstart_val + timedelta(minutes=30)
+        else:
+            end_val = None
+
+        description_lines: list[str] = []
         db_description = str(event.get("description") or "").strip()
         if db_description:
             description_lines.append(db_description)
@@ -288,8 +326,91 @@ def get_calendar() -> Response:
             description_lines.append(f"{REPORT_URL_LABEL}: {report_url}")
         if source_url:
             description_lines.append(f"{SOURCE_URL_LABEL}: {source_url}")
-        calendar_event.add("description", "\n\n".join(description_lines))
 
-        calendar.add_component(calendar_event)
+        result.append(
+            CalendarEvent(
+                uid=f"{security_id}-{event_date}-{event_type}@isr-earnings",
+                summary=f"{company_name} - {event_type}",
+                start=dtstart_val,
+                end=end_val,
+                all_day=all_day,
+                description="\n\n".join(description_lines),
+                event_type=event_type,
+                company_name=company_name,
+                source_url=source_url,
+                report_url=report_url,
+            )
+        )
+
+    return result
+
+
+@app.get("/calendar")
+def get_calendar() -> Response:
+    events = _build_calendar_events(get_all_events())
+
+    calendar = Calendar()
+    calendar.add("prodid", "-//ISR Earnings Calendar//")
+    calendar.add("version", "2.0")
+
+    for ev in events:
+        ics_event = IcsEvent()
+        ics_event.add("summary", ev.summary)
+        ics_event.add("dtstart", ev.start)
+        if ev.end is not None:
+            ics_event.add("dtend", ev.end)
+        ics_event.add("uid", ev.uid)
+        ics_event.add("description", ev.description)
+        calendar.add_component(ics_event)
 
     return Response(content=calendar.to_ical(), media_type="text/calendar")
+
+
+def _event_to_fullcalendar(ev: CalendarEvent) -> dict[str, object]:
+    return {
+        "id": ev.uid,
+        "title": ev.summary,
+        "start": ev.start.isoformat(),
+        "end": ev.end.isoformat() if ev.end is not None else None,
+        "allDay": ev.all_day,
+        "extendedProps": {
+            "event_type": ev.event_type,
+            "company_name": ev.company_name,
+            "description": ev.description,
+            "source_url": ev.source_url,
+            "report_url": ev.report_url,
+        },
+    }
+
+
+@app.get("/api/events")
+def get_events_json() -> list[dict[str, object]]:
+    events = _build_calendar_events(get_all_events())
+    return [_event_to_fullcalendar(ev) for ev in events]
+
+
+def _build_subscribe_urls(request: Request) -> dict[str, str]:
+    base = str(request.base_url).rstrip("/")
+    ics_url = f"{base}/calendar"
+    webcal_url = ics_url
+    for scheme in ("https://", "http://"):
+        if webcal_url.startswith(scheme):
+            webcal_url = "webcal://" + webcal_url[len(scheme) :]
+            break
+    google_url = "https://calendar.google.com/calendar/r?cid=" + urllib.parse.quote(
+        webcal_url, safe=""
+    )
+    return {
+        "ics_url": ics_url,
+        "webcal_url": webcal_url,
+        "google_url": google_url,
+    }
+
+
+@app.get("/view", response_class=HTMLResponse)
+def calendar_view(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="calendar.html",
+        context=_build_subscribe_urls(request),
+    )

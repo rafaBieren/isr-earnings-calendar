@@ -1,0 +1,252 @@
+:root {
+  --c-bg: #f6f7fb;
+  --c-surface: #ffffff;
+  --c-border: #e3e6ef;
+  --c-text: #1a1d29;
+  --c-muted: #5b6172;
+  --c-accent: #1f6feb;
+  --c-google: #1a73e8;
+  --c-outlook: #0078d4;
+  --radius: 8px;
+  --shadow: 0 2px 8px rgba(20, 30, 60, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Arial Hebrew", "Heebo", sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 32px;
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  flex-wrap: wrap;
+}
+
+.app-header h1 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--c-muted);
+  font-size: 14px;
+}
+
+.subscribe-block {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+
+.btn-google {
+  background: var(--c-google);
+  color: #fff;
+}
+
+.btn-outlook {
+  background: var(--c-outlook);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-color: var(--c-border);
+}
+
+.btn:hover {
+  filter: brightness(0.95);
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 32px;
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#company-search {
+  padding: 8px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  min-width: 220px;
+  font-family: inherit;
+}
+
+main {
+  padding: 20px 32px 40px;
+}
+
+#calendar {
+  background: var(--c-surface);
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.fc {
+  direction: rtl;
+  font-family: inherit;
+}
+
+.fc .fc-button {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+  background: #144aa6;
+  border-color: #144aa6;
+}
+
+.fc-event {
+  cursor: pointer;
+}
+
+dialog#event-modal {
+  width: min(560px, 92vw);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0;
+  box-shadow: 0 12px 40px rgba(20, 30, 60, 0.25);
+}
+
+dialog#event-modal::backdrop {
+  background: rgba(20, 30, 60, 0.45);
+}
+
+.modal-content {
+  padding: 20px 24px 24px;
+  font-family: inherit;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--c-muted);
+  padding: 4px;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.modal-grid dt {
+  color: var(--c-muted);
+}
+
+.modal-grid dd {
+  margin: 0;
+}
+
+#modal-description-section h3 {
+  margin: 12px 0 4px;
+  font-size: 14px;
+  color: var(--c-muted);
+  font-weight: 600;
+}
+
+#modal-description {
+  white-space: pre-wrap;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.modal-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.modal-links a {
+  color: var(--c-accent);
+  text-decoration: none;
+  font-size: 14px;
+  border: 1px solid var(--c-border);
+  padding: 6px 12px;
+  border-radius: var(--radius);
+}
+
+.modal-links a:hover {
+  background: #f1f4fb;
+}
+
+@media (max-width: 640px) {
+  .app-header,
+  .filter-bar,
+  main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .app-header h1 {
+    font-size: 18px;
+  }
+}

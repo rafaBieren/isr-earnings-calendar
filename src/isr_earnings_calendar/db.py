@@ -132,7 +132,8 @@ def get_all_events() -> list[dict[str, object]]:
     connection = connect(settings.db_path)
     try:
         initialize_schema(connection)
-        rows = connection.execute("""
+        rows = connection.execute(
+            """
             SELECT
                 id,
                 security_id,
@@ -145,7 +146,8 @@ def get_all_events() -> list[dict[str, object]]:
                 report_url
             FROM events
             ORDER BY event_date, security_id, event_type
-            """).fetchall()
+            """
+        ).fetchall()
         return [dict(row) for row in rows]
     finally:
         connection.close()

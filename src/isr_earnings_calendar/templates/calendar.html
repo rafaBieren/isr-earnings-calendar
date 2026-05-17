@@ -1,0 +1,112 @@
+<!doctype html>
+<html dir="rtl" lang="he">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>יומן אירועים — דוחות הבורסה</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', path='/calendar.css') }}" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="title-block">
+        <h1>יומן אירועים — בורסת תל אביב</h1>
+        <p class="subtitle">
+          דוחות, שיחות ועידה והנפקות. לחצו על אירוע לפרטים מלאים.
+        </p>
+      </div>
+
+      <div class="subscribe-block">
+        <a
+          id="subscribe-google"
+          class="btn btn-google"
+          href="{{ google_url }}"
+          target="_blank"
+          rel="noopener"
+        >
+          הוסיפו ליומן Google
+        </a>
+        <a
+          id="subscribe-webcal"
+          class="btn btn-outlook"
+          href="{{ webcal_url }}"
+        >
+          הוסיפו ל-Outlook / Apple
+        </a>
+        <button id="copy-ics" class="btn btn-secondary" type="button">
+          העתיקו קישור ICS
+        </button>
+      </div>
+    </header>
+
+    <section class="filter-bar" aria-label="סינון אירועים">
+      <div class="filter-group">
+        <label class="filter-item">
+          <input type="checkbox" data-filter-type="פרסום דוחות" checked />
+          <span>דוחות</span>
+        </label>
+        <label class="filter-item">
+          <input type="checkbox" data-filter-type="שיחת ועידה" checked />
+          <span>שיחת ועידה</span>
+        </label>
+        <label class="filter-item">
+          <input type="checkbox" data-filter-type="הנפקה" checked />
+          <span>הנפקה</span>
+        </label>
+        <label class="filter-item">
+          <input type="checkbox" data-filter-type="__other__" checked />
+          <span>אחר</span>
+        </label>
+      </div>
+      <input
+        id="company-search"
+        type="search"
+        placeholder="חיפוש לפי שם חברה"
+        aria-label="חיפוש לפי שם חברה"
+      />
+    </section>
+
+    <main>
+      <div id="calendar"></div>
+    </main>
+
+    <dialog id="event-modal">
+      <article class="modal-content">
+        <header class="modal-header">
+          <h2 id="modal-title"></h2>
+          <button
+            class="modal-close"
+            type="button"
+            data-close-modal
+            aria-label="סגירה"
+          >
+            ✕
+          </button>
+        </header>
+        <dl class="modal-grid">
+          <dt>חברה</dt>
+          <dd id="modal-company"></dd>
+          <dt>סוג אירוע</dt>
+          <dd id="modal-type"></dd>
+          <dt>מועד</dt>
+          <dd id="modal-when"></dd>
+        </dl>
+        <section id="modal-description-section" hidden>
+          <h3>פרטים</h3>
+          <p id="modal-description"></p>
+        </section>
+        <footer class="modal-links" id="modal-links"></footer>
+      </article>
+    </dialog>
+
+    <script>
+      window.CALENDAR_CONFIG = {{ {"ics_url": ics_url, "webcal_url": webcal_url, "google_url": google_url} | tojson }};
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/he.global.min.js"></script>
+    <script src="{{ url_for('static', path='/calendar.js') }}"></script>
+  </body>
+</html>
