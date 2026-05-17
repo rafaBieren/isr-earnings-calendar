@@ -20,4 +20,4 @@ if __name__ == "__main__":
     db_dir = os.path.dirname(db_path) or "."
     os.makedirs(db_dir, exist_ok=True)
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=port, forwarded_allow_ips="*")

@@ -8,3 +8,4 @@ resend
 beautifulsoup4
 google-genai
 pydantic
+jinja2
