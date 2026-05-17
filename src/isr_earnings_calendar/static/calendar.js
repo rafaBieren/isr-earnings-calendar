@@ -31,6 +31,8 @@
       height: "auto",
       nowIndicator: true,
       eventDisplay: "block",
+      displayEventTime: false,
+      slotEventOverlap: false,
       events: "/api/events",
       eventClick: function (info) {
         info.jsEvent.preventDefault();
