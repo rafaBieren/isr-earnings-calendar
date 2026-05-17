@@ -113,9 +113,7 @@ def test_fetch_open_offerings_success(mock_get: MagicMock) -> None:
             "end_date": "2026-03-04T15:30:00",
             "event_type": "הנפקה ציבורית",
             "description": (
-                "סוג מכרז: מחיר\n\nמחיר ליחידה: 57\n\nכמות יחידות מוצעות: "
-                '2250000\n\nקישור לדו"ח ההצעה: '
-                "https://maya.tase.co.il/reports/details/1725506"
+                "סוג מכרז: מחיר\n\nמחיר ליחידה: 57\n\n" "כמות יחידות מוצעות: 2250000"
             ),
             "source_url": "https://maya.tase.co.il/he/offerings",
             "report_url": "https://maya.tase.co.il/reports/details/1725506",
